@@ -1,15 +1,19 @@
 import argparse
+import scanner
+
+def error(int, message: str) -> None:
+    print("[line {}] Error: {}", line, message)
 
 class LoxRunner(object):
     def __init__(self):
         had_error = False
     
     def run(self, contents: str) -> None:
-        for token in contents.split():
-            print("{}".format(token))
-
-    def error(self, line: int, message: str) -> None:
-        print("[line {}] Error: {}", line, message)
+        sc = scanner.Scanner(contents)
+        tokens = sc.scan_tokens()
+        for token in tokens:
+            print(token)
+        
 
     def run_file(self, file_name: str) -> None:
         with open(file_name, 'r', encoding='utf-8') as file:
