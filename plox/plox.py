@@ -1,7 +1,7 @@
 import argparse
 import scanner
 
-def error(int, message: str) -> None:
+def error(line: int, message: str) -> None:
     print("[line {}] Error: {}", line, message)
 
 class LoxRunner(object):
