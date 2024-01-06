@@ -1,5 +1,5 @@
 from tokens import Token, TokenType
-from plox import error
+import plox
 
 KEYWORDS: dict[str, TokenType] = {
     "and": TokenType.AND,
@@ -85,7 +85,7 @@ class Scanner:
             case alpha if self._is_alpha(alpha):
                 self._identifier()
             case rest:
-                error(self.line, "Unexpected character {}".format(rest))
+                plox.error(self.line, "Unexpected character {}".format(rest))
 
     def _is_alpha(self, c: str) -> bool:
         return (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') or c == '_'
@@ -122,7 +122,7 @@ class Scanner:
             self._advance()
 
         if self._is_at_end():
-            error(self.line, "unterminated string")
+            plox.error(self.line, "unterminated string")
             return
 
         # Closing "

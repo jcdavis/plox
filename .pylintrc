@@ -1,0 +1,4 @@
+[FORMAT]
+remove-trailing-whitespace=yes
+[MESSAGES CONTROL]
+disable=missing-docstring
