@@ -1,10 +1,11 @@
 from enum import Enum
 
+
 class TokenType(Enum):
     # Single-character tokens.
     LEFT_PAREN = 1
     RIGHT_PAREN = 2
-    LEFT_BRACE= 3
+    LEFT_BRACE = 3
     RIGHT_BRACE = 4
     COMMA = 5
     DOT = 6
@@ -49,13 +50,13 @@ class TokenType(Enum):
 
     EOF = 39
 
+
 class Token:
     def __init__(self, token_type: TokenType, lexeme: str, literal: object, line: int) -> None:
         self.token_type = token_type
         self.lexeme = lexeme
         self.literal = literal
         self.line = line
-    
+
     def __str__(self) -> str:
         return "Token({}, {}. {}, {})".format(self.token_type, self.lexeme, self.literal, self.line)
-    

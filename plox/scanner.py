@@ -20,6 +20,7 @@ KEYWORDS: dict[str, TokenType] = {
     "while": TokenType.WHILE
 }
 
+
 class Scanner:
     def __init__(self, source: str) -> None:
         self.source = source
@@ -99,7 +100,7 @@ class Scanner:
     def _identifier(self) -> None:
         while self._is_alphanumeric(self._peek()):
             self._advance()
-  
+
         text = self.source[self.start : self.current]
         token_type = KEYWORDS.get(text, TokenType.IDENTIFIER)
         self._add_token(token_type)
@@ -113,7 +114,7 @@ class Scanner:
             self._advance()
             while self._is_digit(self._peek()):
                 self._advance()
-        self._add_token(TokenType.NUMBER,float(self.source[self.start : self.current]))
+        self._add_token(TokenType.NUMBER, float(self.source[self.start : self.current]))
 
     def _string(self) -> None:
         while self._peek() != '"' and not self._is_at_end():
