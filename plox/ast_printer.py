@@ -13,11 +13,12 @@ class AstPrinter:
             case Literal(value):
                 print("visiting Literal {}".format(value))
                 return str(value)
-            case Unary(left, op):
-                print("visiting Unary {} {}".format(left, op))
-                return self.__parenthesize(op.lexeme, left)
+            case Unary(op, right):
+                print("visiting Unary {} {}".format(right, op))
+                return self.__parenthesize(op.lexeme, right)
+        raise Exception("Missing expr type")
 
-    def __parenthesize(self, name: str, *args) -> str:
+    def __parenthesize(self, name: str, *args: Expr) -> str:
         result = '(' + str(name)
 
         for op in args:

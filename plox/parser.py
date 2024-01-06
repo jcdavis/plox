@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 from tokens import Token, TokenType
 from expr import Expr, Binary, Grouping, Literal, Unary
 from plox import error
@@ -12,7 +13,7 @@ class Parser:
         self.current = 0
         self.logger = logging.getLogger("parser")
 
-    def parse(self) -> Expr:
+    def parse(self) -> Optional[Expr]:
         try:
             return self._expression()
         except ParseException:
@@ -88,13 +89,15 @@ class Parser:
             self._consume(TokenType.RIGHT_PAREN, "Expect ')' after expression.")
             return Grouping(expr)
 
-        self._error(self._peek(), "Expected expression")
+        # Make lint happy
+        return Unary(self._error(self._peek(), "Expected expression"), Literal("failed"))
 
     def _consume(self, token_type: TokenType, message: str) -> Token:
         if self._check(token_type):
             return self._advance()
 
-        self._error(self._peek(), message)
+        # Make lint happy
+        return self._error(self._peek(), message)
 
     def _error(self, token: Token, message: str) -> Token:
         error(token.line, message)

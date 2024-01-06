@@ -8,25 +8,29 @@ had_error = False
 
 
 def error(line: int, message: str) -> None:
+    global had_error
     had_error = True
     print("[line {}] Error: {}".format(line, message))
 
 
 class LoxRunner(object):
     def run(self, contents: str) -> None:
+        global had_error
         sc = scanner.Scanner(contents)
         tokens = sc.scan_tokens()
         p = parser.Parser(tokens)
         expression = p.parse()
         if had_error:
             return
-        print(ast_printer.AstPrinter().print(expression))
+        if expression:
+            print(ast_printer.AstPrinter().print(expression))
 
     def run_file(self, file_name: str) -> None:
         with open(file_name, 'r', encoding='utf-8') as file:
             self.run(file.read())
 
     def run_prompt(self) -> None:
+        global had_error
         line = input('>')
         while line:
             self.run(line)

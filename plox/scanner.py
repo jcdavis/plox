@@ -72,7 +72,7 @@ class Scanner:
             case '/':
                 if self._match('/'):
                     while self._peek() != '\n' and not self._is_at_end():
-                        self.advance()
+                        self._advance()
                 else:
                     self._add_token(TokenType.SLASH)
             case ' ' | '\r' | '\t':
