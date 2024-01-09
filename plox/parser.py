@@ -1,8 +1,8 @@
 import logging
 from typing import Optional
-from tokens import Token, TokenType
-from expr import Expr, Binary, Grouping, Literal, Unary
-from plox import error
+from .tokens import Token, TokenType
+from .expr import Expr, Binary, Grouping, Literal, Unary
+from . import plox
 
 class ParseException(Exception):
     pass
@@ -100,7 +100,7 @@ class Parser:
         return self._error(self._peek(), message)
 
     def _error(self, token: Token, message: str) -> Token:
-        error(token.line, message)
+        plox.error(token.line, message)
         raise ParseException()
 
     def _synchronize(self) -> None:

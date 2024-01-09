@@ -1,5 +1,5 @@
-from tokens import Token, TokenType
-from expr import Expr, Binary, Grouping, Literal, Unary
+from .tokens import Token, TokenType
+from .expr import Expr, Binary, Grouping, Literal, Unary
 
 class AstPrinter:
     def print(self, expr: Expr) -> str:

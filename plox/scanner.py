@@ -1,5 +1,5 @@
-from tokens import Token, TokenType
-import plox
+from .tokens import Token, TokenType
+from . import plox
 
 KEYWORDS: dict[str, TokenType] = {
     "and": TokenType.AND,
@@ -86,7 +86,7 @@ class Scanner:
             case alpha if self._is_alpha(alpha):
                 self._identifier()
             case rest:
-                plox.error(self.line, "Unexpected character {}".format(rest))
+                plox.error(self.line, f"Unexpected character {rest}")
 
     def _is_alpha(self, c: str) -> bool:
         return (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') or c == '_'
