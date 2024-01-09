@@ -11,12 +11,11 @@ had_error = False
 def error(line: int, message: str) -> None:
     global had_error
     had_error = True
-    print("[line {}] Error: {}".format(line, message))
+    print(f"[line {line}] Error: {message}")
 
 
-class LoxRunner(object):
+class LoxRunner:
     def run(self, contents: str) -> None:
-        global had_error
         sc = scanner.Scanner(contents)
         tokens = sc.scan_tokens()
         p = parser.Parser(tokens)
@@ -42,10 +41,10 @@ class LoxRunner(object):
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog='plox')
-    parser.add_argument('-f', '--file', required=False)
+    arg_parser = argparse.ArgumentParser(prog='plox')
+    arg_parser.add_argument('-f', '--file', required=False)
     # logging.basicConfig(level=logging.DEBUG)
-    args = parser.parse_args()
+    args = arg_parser.parse_args()
     lox = LoxRunner()
     if args.file:
         lox.run_file(args.file)
