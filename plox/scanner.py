@@ -101,7 +101,7 @@ class Scanner:
         while self._is_alphanumeric(self._peek()):
             self._advance()
 
-        text = self.source[self.start : self.current]
+        text = self.source[self.start:self.current]
         token_type = KEYWORDS.get(text, TokenType.IDENTIFIER)
         self._add_token(token_type)
 
@@ -114,7 +114,7 @@ class Scanner:
             self._advance()
             while self._is_digit(self._peek()):
                 self._advance()
-        self._add_token(TokenType.NUMBER, float(self.source[self.start : self.current]))
+        self._add_token(TokenType.NUMBER, float(self.source[self.start:self.current]))
 
     def _string(self) -> None:
         while self._peek() != '"' and not self._is_at_end():
@@ -129,7 +129,7 @@ class Scanner:
         # Closing "
         self._advance()
 
-        value = self.source[self.start + 1 : self.current - 1]
+        value = self.source[self.start + 1:self.current - 1]
         self._add_token(TokenType.STRING, value)
 
     def _peek(self) -> str:

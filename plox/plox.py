@@ -20,7 +20,7 @@ class LoxRunner:
         tokens = sc.scan_tokens()
         p = parser.Parser(tokens)
         expression = p.parse()
-        if had_error:
+        if had_error or not expression:
             return
         interp = interpreter.Interpreter()
         interp.interpret(expression)
@@ -43,9 +43,11 @@ class LoxRunner:
 def main() -> None:
     arg_parser = argparse.ArgumentParser(prog='plox')
     arg_parser.add_argument('-f', '--file', required=False)
-    # logging.basicConfig(level=logging.DEBUG)
+    arg_parser.add_argument('-d', "--debug", action='store_true')
     args = arg_parser.parse_args()
     lox = LoxRunner()
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
     if args.file:
         lox.run_file(args.file)
     else:

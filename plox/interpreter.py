@@ -1,3 +1,4 @@
+import logging
 import numbers
 from . import plox
 from .expr import Binary, Expr, Grouping, Literal, Unary
@@ -6,12 +7,16 @@ from .tokens import Token, TokenType
 
 
 class Interpreter:
+    def __init__(self):
+        self.logger = logging.getLogger("interpreter")
+
     def interpret(self, expr: Expr) -> None:
         try:
             value = self.__evaluate(expr)
             print(self.__stringify(value))
         except PloxRuntimeException as pre:
             plox.error(pre.token.line, pre.message)
+
     def __evaluate(self, expr: Expr) -> object:
         match expr:
             case Grouping(expression):
@@ -22,69 +27,83 @@ class Interpreter:
                 return self.__visit_unary(op, right)
             case Binary(left, op, right):
                 return self.__visit_binary(left, op, right)
+        raise Exception(f"Unexpected expr {expr}")
 
     def __visit_unary(self, op: Token, right: Expr) -> object:
+        self.logger.debug("Evaluating unary: %s (%s)", op, right)
         evaluated_right = self.__evaluate(right)
+
 
         match op.token_type:
             case TokenType.BANG:
                 return not self.__is_truthy(evaluated_right)
             case TokenType.MINUS:
-                self.__check_number_operand(right.operator, evaluated_right)
+                if not isinstance(evaluated_right, numbers.Real):
+                    raise PloxRuntimeException(op, "Operand must be a number")
                 return -evaluated_right
+            case _:
+                raise PloxRuntimeException(op, f"Unexpected token type {op}")
 
     def __visit_binary(self, left: Expr, op: Token, right: Expr) -> object:
+        self.logger.debug("Evaluating binary: %s (%s %s)", op, left, right)
         evaluated_left = self.__evaluate(left)
         evaluated_right = self.__evaluate(right)
 
         match op.token_type:
             case TokenType.GREATER:
-                self.__check_number_operands(op, evaluated_left, evaluated_right)
+                if not (isinstance(evaluated_left, numbers.Real) and
+                        isinstance(evaluated_right, numbers.Real)):
+                    raise PloxRuntimeException(op, "Operands must be numbers")
                 return evaluated_left > evaluated_right
             case TokenType.GREATER_EQUAL:
-                self.__check_number_operands(op, evaluated_left, evaluated_right)
+                if not (isinstance(evaluated_left, numbers.Real) and
+                        isinstance(evaluated_right, numbers.Real)):
+                    raise PloxRuntimeException(op, "Operands must be numbers")
                 return evaluated_left >= evaluated_right
             case TokenType.LESS:
-                self.__check_number_operands(op, evaluated_left, evaluated_right)
+                if not (isinstance(evaluated_left, numbers.Real) and
+                        isinstance(evaluated_right, numbers.Real)):
+                    raise PloxRuntimeException(op, "Operands must be numbers")
                 return evaluated_left < evaluated_right
             case TokenType.LESS_EQUAL:
-                self.__check_number_operands(op, evaluated_left, evaluated_right)
+                if not (isinstance(evaluated_left, numbers.Real) and
+                        isinstance(evaluated_right, numbers.Real)):
+                    raise PloxRuntimeException(op, "Operands must be numbers")
                 return evaluated_left <= evaluated_right
             case TokenType.BANG_EQUAL:
                 return not self.__is_equal(evaluated_left, evaluated_right)
             case TokenType.EQUAL_EQUAL:
                 return self.__is_equal(evaluated_left, evaluated_right)
             case TokenType.MINUS:
-                self.__check_number_operands(op, evaluated_left, evaluated_right)
+                if not (isinstance(evaluated_left, numbers.Real) and
+                        isinstance(evaluated_right, numbers.Real)):
+                    raise PloxRuntimeException(op, "Operands must be numbers")
                 return evaluated_left - evaluated_right
             case TokenType.PLUS:
-                if (isinstance(evaluated_left, numbers.Number) and
-                    isinstance(evaluated_right, numbers.Number)) or (
+                if (isinstance(evaluated_left, numbers.Real) and
+                        isinstance(evaluated_right, numbers.Real)) or (
                         isinstance(evaluated_left, str) and
-                        isinstance(evaluated_right, str)
-                    ):
+                        isinstance(evaluated_right, str)):
                     return evaluated_left + evaluated_right
                 # Handle float vs str differently?
                 raise PloxRuntimeException(op, "Can only combine numbers or strings")
             case TokenType.SLASH:
-                self.__check_number_operands(op, evaluated_left, evaluated_right)
+                if not (isinstance(evaluated_left, numbers.Real) and
+                        isinstance(evaluated_right, numbers.Real)):
+                    raise PloxRuntimeException(op, "Operands must be numbers")
                 return evaluated_left / evaluated_right
             case TokenType.STAR:
-                self.__check_number_operands(op, evaluated_left, evaluated_right)
+                if not (isinstance(evaluated_left, numbers.Real) and
+                        isinstance(evaluated_right, numbers.Real)):
+                    raise PloxRuntimeException(op, "Operands must be numbers")
                 return evaluated_left * evaluated_right
-
-    def __check_number_operand(self, operator: Token, operand: object) -> None:
-        if not isinstance(operand, numbers.Number):
-            raise PloxRuntimeException(operator, "Operand must be a number")
-
-    def __check_number_operands(self, operator: Token, left: object, right: object) -> None:
-        if not (isinstance(left, numbers.Number) and isinstance(right, numbers.Number)):
-            raise PloxRuntimeException(operator, "Operands must be numbers")
+            case _:
+                raise PloxRuntimeException(op, f"Unexpected token type {op}")
 
     def __is_truthy(self, op: object) -> bool:
         if not op:
             return False
-        elif isinstance(op, bool):
+        if isinstance(op, bool):
             return op
         else:
             return True
@@ -95,7 +114,7 @@ class Interpreter:
         return left is right
 
     def __stringify(self, obj: object) -> str:
-        if not obj:
+        if obj is None:
             return "nil"
 
         return str(obj)

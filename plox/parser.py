@@ -4,8 +4,10 @@ from .tokens import Token, TokenType
 from .expr import Expr, Binary, Grouping, Literal, Unary
 from . import plox
 
+
 class ParseException(Exception):
     pass
+
 
 class Parser:
     def __init__(self, tokens: list[Token]):
@@ -35,7 +37,7 @@ class Parser:
     def _comparison(self) -> Expr:
         expr = self._term()
         self.logger.debug("Entering comparison with base of %s", expr)
-        while self._match(TokenType.GREATER, TokenType.GREATER_EQUAL, TokenType.LESS_EQUAL):
+        while self._match(TokenType.GREATER, TokenType.GREATER_EQUAL, TokenType.LESS, TokenType.LESS_EQUAL):
             operator = self._previous()
             right = self._term()
             expr = Binary(expr, operator, right)
