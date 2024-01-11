@@ -1,9 +1,10 @@
 import logging
 import numbers
 
-from .stmt import Expression, Print, Stmt
+from .environment import Environment
+from .stmt import Block, Expression, If, Print, Stmt, Var, While
 from . import plox
-from .expr import Binary, Expr, Grouping, Literal, Unary
+from .expr import Assign, Binary, Expr, Grouping, Literal, Logical, Unary, Variable
 from .runtime_exception import PloxRuntimeException
 from .tokens import Token, TokenType
 
@@ -11,6 +12,7 @@ from .tokens import Token, TokenType
 class Interpreter:
     def __init__(self):
         self.logger = logging.getLogger("interpreter")
+        self.environment = Environment()
 
     def interpret(self, statements: list[Stmt]) -> None:
         try:
@@ -29,15 +31,45 @@ class Interpreter:
                 return self.__visit_unary(op, right)
             case Binary(left, op, right):
                 return self.__visit_binary(left, op, right)
+            case Variable(name):
+                return self.environment.get(name)
+            case Assign(name, value):
+                return self.environment.assign(name, self.__evaluate(value))
+            case Logical(left, op, right):
+                return self.__visit__logical(left, op, right)
         raise Exception(f"Unexpected expr {expr}")
 
     def __execute(self, statement: Stmt) -> None:
         match statement:
+            case Block(statements):
+                self.__execute_block(statements, Environment(self.environment))
             case Expression(expression):
                 self.__evaluate(expression)
             case Print(expression):
                 value = self.__evaluate(expression)
                 print(self.__stringify(value))
+            case Var(name, intializer):
+                value = None
+                if intializer:
+                    value = self.__evaluate(intializer)
+                self.environment.define(name.lexeme, value)
+            case If(condition, then_branch, else_branch):
+                if self.__is_truthy(self.__evaluate(condition)):
+                    self.__execute(then_branch)
+                elif else_branch:
+                    self.__execute(else_branch)
+            case While(condition, body):
+                while self.__is_truthy(condition):
+                    self.__execute(body)
+
+    def __execute_block(self, statements: list[Stmt], environment: Environment) -> None:
+        prev = self.environment
+        try:
+            self.environment = environment
+            for statement in statements:
+                self.__execute(statement)
+        finally:
+            self.environment = prev
 
     def __visit_unary(self, op: Token, right: Expr) -> object:
         self.logger.debug("Evaluating unary: %s (%s)", op, right)
@@ -108,6 +140,18 @@ class Interpreter:
                 return evaluated_left * evaluated_right
             case _:
                 raise PloxRuntimeException(op, f"Unexpected token type {op}")
+
+    def __visit__logical(self, left: Expr, op: Token, right: Expr) -> object:
+        evaluated_left = self.__evaluate(left)
+
+        if op.token_type == TokenType.OR:
+            if self.__is_truthy(evaluated_left):
+                return left
+        else:
+            # And case
+            if not self.__is_truthy(evaluated_left):
+                return evaluated_left
+        return self.__evaluate(right)
 
     def __is_truthy(self, op: object) -> bool:
         if not op:

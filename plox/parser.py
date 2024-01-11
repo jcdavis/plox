@@ -1,8 +1,9 @@
 import logging
+from typing import Optional
 
-from .stmt import Expression, Print, Stmt
+from .stmt import Block, Expression, If, Print, Stmt, Var, While
 from .tokens import Token, TokenType
-from .expr import Expr, Binary, Grouping, Literal, Unary
+from .expr import Assign, Expr, Binary, Grouping, Literal, Logical, Unary, Variable
 from . import plox
 
 
@@ -17,28 +18,158 @@ class Parser:
         self.logger = logging.getLogger("parser")
 
     def parse(self) -> list[Stmt]:
-        statements = []
+        statements: list[Stmt] = []
         while not self.__is_at_end():
-            statements.append(self.__statement())
+            declaration = self.__declaration()
+            if declaration:
+                statements.append(declaration)
+            else:
+                self.logger.warn("Empty declaration, how to handle???")
         return statements
 
     def __expression(self) -> Expr:
-        return self.__equality()
+        return self.__assignment()
+
+    def __declaration(self) -> Optional[Stmt]:
+        try:
+            if self.__match(TokenType.VAR):
+                return self.__var_declaration()
+            return self.__statement()
+        except ParseException:
+            self.__synchronize()
+            return None
+
+    def __assignment(self) -> Expr:
+        expr = self.__or()
+
+        if self.__match(TokenType.EQUAL):
+            equals = self.__previous()
+            value = self.__assignment()
+
+            match expr:
+                case Variable(name):
+                    return Assign(name, value)
+                case _:
+                    self.__error(equals, "Invalid assignment target")
+        return expr
+
+    def __or(self) -> Expr:
+        expr = self.__and()
+
+        while self.__match(TokenType.OR):
+            operator = self.__previous()
+            right = self.__and()
+            expr = Logical(expr, operator, right)
+
+        return expr
+
+    def __and(self) -> Expr:
+        expr = self.__equality()
+
+        while self.__match(TokenType.AND):
+            operator = self.__previous()
+            right = self.__equality()
+            expr = Logical(expr, operator, right)
+
+        return expr
 
     def __statement(self) -> Stmt:
+        if self.__match(TokenType.FOR):
+            return self.__for_statement()
+        if self.__match(TokenType.IF):
+            return self.__if_statement()
         if self.__match(TokenType.PRINT):
             return self.__print_statement()
+        if self.__match(TokenType.WHILE):
+            return self.__while_statement()
+        if self.__match(TokenType.LEFT_BRACE):
+            return self.__block_statement()
         return self.__expression_statement()
+
+    def __for_statement(self) -> Stmt:
+        self.__consume(TokenType.LEFT_PAREN, "Expect '(' after 'for'.")
+
+        initializer = None
+        if self.__match(TokenType.SEMICOLON):
+            pass
+        elif self.__match(TokenType.VAR):
+            initializer = self.__var_declaration()
+        else:
+            initializer = self.__expression_statement()
+
+        condition = None
+        if not self.__check(TokenType.SEMICOLON):
+            condition = self.__expression()
+        self.__consume(TokenType.SEMICOLON, "Expect ';' after loop condition.")
+
+        increment = None
+        if not self.__check(TokenType.RIGHT_PAREN):
+            increment = self.__expression()
+        self.__consume(TokenType.RIGHT_PAREN, "Expect ')' after for clauses.")
+        body = self.__statement()
+
+        if increment:
+            body = Block([body, Expression(increment)])
+        if not condition:
+            condition = Literal(True)
+        body = While(condition, body)
+        if initializer:
+            body = Block([initializer, body])
+
+        return body
+
+    def __if_statement(self) -> Stmt:
+        self.__consume(TokenType.LEFT_PAREN, "Expect '(' after 'if'.")
+        condition = self.__expression()
+        self.__consume(TokenType.RIGHT_PAREN, "Expect ')' after if condition")
+
+        then_branch = self.__statement()
+        else_branch = None
+        if self.__match(TokenType.ELSE):
+            else_branch = self.__statement()
+
+        return If(condition, then_branch, else_branch)
 
     def __print_statement(self) -> Stmt:
         value = self.__expression()
         self.__consume(TokenType.SEMICOLON, "Expect ';' after value.")
         return Print(value)
 
+    def __var_declaration(self) -> Stmt:
+        name = self.__consume(TokenType.IDENTIFIER, "Expect variable name.")
+
+        initializer = None
+        if self.__match(TokenType.EQUAL):
+            initializer = self.__expression()
+
+        self.__consume(TokenType.SEMICOLON, "Expect ';' after variable declaration")
+        return Var(name, initializer)
+
+    def __while_statement(self) -> Stmt:
+        self.__consume(TokenType.LEFT_PAREN, "Expected '(' after while")
+        condition = self.__expression()
+        self.__consume(TokenType.RIGHT_PAREN, "Expected '' after while condition")
+
+        return While(condition, self.__statement())
+
     def __expression_statement(self):
         value = self.__expression()
         self.__consume(TokenType.SEMICOLON, "Expect ';' after expression.")
         return Expression(value)
+
+    def __block_statement(self) -> Stmt:
+        statements = []
+
+        while not self.__check(TokenType.RIGHT_BRACE) and not self.__is_at_end():
+            declaration = self.__declaration()
+            if declaration:
+                statements.append(declaration)
+            else:
+                self.logger.warn("Empty declaration, how to handle???")
+
+        self.__consume(TokenType.RIGHT_BRACE, "Expect '}' after block")
+        return Block(statements)
+
 
     def __equality(self) -> Expr:
         expr = self.__comparison()
@@ -102,6 +233,9 @@ class Parser:
 
         if self.__match(TokenType.NUMBER, TokenType.STRING):
             return Literal(self.__previous().literal)
+
+        if self.__match(TokenType.IDENTIFIER):
+            return Variable(self.__previous())
 
         if self.__match(TokenType.LEFT_PAREN):
             expr = self.__expression()
