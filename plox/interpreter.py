@@ -59,7 +59,7 @@ class Interpreter:
                 elif else_branch:
                     self.__execute(else_branch)
             case While(condition, body):
-                while self.__is_truthy(condition):
+                while self.__is_truthy(self.__evaluate(condition)):
                     self.__execute(body)
 
     def __execute_block(self, statements: list[Stmt], environment: Environment) -> None:
