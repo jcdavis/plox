@@ -10,9 +10,11 @@ from .tokens import Token, TokenType
 
 
 class Interpreter:
-    def __init__(self):
+    def __init__(self, capture_output = False):
         self.logger = logging.getLogger("interpreter")
         self.environment = Environment()
+        self.capture_output = capture_output
+        self.output: list[str] = []
 
     def interpret(self, statements: list[Stmt]) -> None:
         try:
@@ -46,8 +48,11 @@ class Interpreter:
             case Expression(expression):
                 self.__evaluate(expression)
             case Print(expression):
-                value = self.__evaluate(expression)
-                print(self.__stringify(value))
+                string = self.__stringify(self.__evaluate(expression))
+                if self.capture_output:
+                    self.output.append(string)
+                else:
+                    print(string)
             case Var(name, intializer):
                 value = None
                 if intializer:
