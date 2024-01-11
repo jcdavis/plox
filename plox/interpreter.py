@@ -43,7 +43,6 @@ class Interpreter:
         self.logger.debug("Evaluating unary: %s (%s)", op, right)
         evaluated_right = self.__evaluate(right)
 
-
         match op.token_type:
             case TokenType.BANG:
                 return not self.__is_truthy(evaluated_right)
