@@ -19,11 +19,11 @@ class LoxRunner:
         sc = scanner.Scanner(contents)
         tokens = sc.scan_tokens()
         p = parser.Parser(tokens)
-        expression = p.parse()
-        if had_error or not expression:
+        statements = p.parse()
+        if had_error:
             return
         interp = interpreter.Interpreter()
-        interp.interpret(expression)
+        interp.interpret(statements)
         #if expression:
         #    print(ast_printer.AstPrinter().print(expression))
 

@@ -1,5 +1,6 @@
 import logging
-from typing import Optional
+
+from .stmt import Expression, Print, Stmt
 from .tokens import Token, TokenType
 from .expr import Expr, Binary, Grouping, Literal, Unary
 from . import plox
@@ -15,13 +16,29 @@ class Parser:
         self.current = 0
         self.logger = logging.getLogger("parser")
 
-    def parse(self) -> Optional[Expr]:
-        try:
-            return self._expression()
-        except ParseException:
-            return None
+    def parse(self) -> list[Stmt]:
+        statements = []
+        while not self._is_at_end():
+            statements.append(self._statement())
+        return statements
+
     def _expression(self) -> Expr:
         return self._equality()
+
+    def _statement(self) -> Stmt:
+        if self._match(TokenType.PRINT):
+            return self._print_statement()
+        return self._expression_statement()
+
+    def _print_statement(self) -> Stmt:
+        value = self._expression()
+        self._consume(TokenType.SEMICOLON, "Expect ';' after value.")
+        return Print(value)
+
+    def _expression_statement(self):
+        value = self._expression()
+        self._consume(TokenType.SEMICOLON, "Expect ';' after expression.")
+        return Expression(value)
 
     def _equality(self) -> Expr:
         expr = self._comparison()

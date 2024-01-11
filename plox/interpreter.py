@@ -1,5 +1,7 @@
 import logging
 import numbers
+
+from .stmt import Expression, Print, Stmt
 from . import plox
 from .expr import Binary, Expr, Grouping, Literal, Unary
 from .runtime_exception import PloxRuntimeException
@@ -10,10 +12,10 @@ class Interpreter:
     def __init__(self):
         self.logger = logging.getLogger("interpreter")
 
-    def interpret(self, expr: Expr) -> None:
+    def interpret(self, statements: list[Stmt]) -> None:
         try:
-            value = self.__evaluate(expr)
-            print(self.__stringify(value))
+            for statement in statements:
+                self.__execute(statement)
         except PloxRuntimeException as pre:
             plox.error(pre.token.line, pre.message)
 
@@ -28,6 +30,14 @@ class Interpreter:
             case Binary(left, op, right):
                 return self.__visit_binary(left, op, right)
         raise Exception(f"Unexpected expr {expr}")
+
+    def __execute(self, statement: Stmt) -> None:
+        match statement:
+            case Expression(expression):
+                self.__evaluate(expression)
+            case Print(expression):
+                value = self.__evaluate(expression)
+                print(self.__stringify(value))
 
     def __visit_unary(self, op: Token, right: Expr) -> object:
         self.logger.debug("Evaluating unary: %s (%s)", op, right)
@@ -105,8 +115,7 @@ class Interpreter:
             return False
         if isinstance(op, bool):
             return op
-        else:
-            return True
+        return True
 
     def __is_equal(self, left: object, right: object) -> bool:
         if not left and not right:
