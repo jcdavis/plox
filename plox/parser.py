@@ -24,7 +24,7 @@ class Parser:
             if declaration:
                 statements.append(declaration)
             else:
-                self.logger.warn("Empty declaration, how to handle???")
+                self.logger.warning("Empty declaration, how to handle???")
         return statements
 
     def __expression(self) -> Expr:
@@ -165,7 +165,7 @@ class Parser:
             if declaration:
                 statements.append(declaration)
             else:
-                self.logger.warn("Empty declaration, how to handle???")
+                self.logger.warning("Empty declaration, how to handle???")
 
         self.__consume(TokenType.RIGHT_BRACE, "Expect '}' after block")
         return Block(statements)

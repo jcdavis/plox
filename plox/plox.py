@@ -1,6 +1,5 @@
 import logging
 import argparse
-from . import ast_printer
 from . import interpreter
 from . import parser
 from . import scanner
@@ -24,8 +23,6 @@ class LoxRunner:
             return
         interp = interpreter.Interpreter()
         interp.interpret(statements)
-        #if expression:
-        #    print(ast_printer.AstPrinter().print(expression))
 
     def run_file(self, file_name: str) -> None:
         with open(file_name, 'r', encoding='utf-8') as file:
