@@ -20,6 +20,13 @@ class Binary(Expr):
 
 
 @dataclass
+class Call(Expr):
+    callee: Expr
+    paren: Token
+    arguments: list[Expr]
+
+
+@dataclass
 class Grouping(Expr):
     expression: Expr
 

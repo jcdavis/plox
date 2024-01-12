@@ -31,6 +31,13 @@ class Var(Stmt):
 
 
 @dataclass
+class Function(Stmt):
+    name: Token
+    params: list[Token]
+    body: list[Stmt]
+
+
+@dataclass
 class If(Stmt):
     condition: Expr
     then_branch: Stmt

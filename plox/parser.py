@@ -1,9 +1,9 @@
 import logging
 from typing import Optional
 
-from .stmt import Block, Expression, If, Print, Stmt, Var, While
+from .stmt import Block, Expression, Function, If, Print, Stmt, Var, While
 from .tokens import Token, TokenType
-from .expr import Assign, Expr, Binary, Grouping, Literal, Logical, Unary, Variable
+from .expr import Assign, Call, Expr, Binary, Grouping, Literal, Logical, Unary, Variable
 from . import plox
 
 
@@ -32,6 +32,8 @@ class Parser:
 
     def __declaration(self) -> Optional[Stmt]:
         try:
+            if self.__match(TokenType.FUN):
+                return self.__function("function")
             if self.__match(TokenType.VAR):
                 return self.__var_declaration()
             return self.__statement()
@@ -118,6 +120,22 @@ class Parser:
 
         return body
 
+    def __function(self, kind: str) -> Function:
+        name = self.__consume(TokenType.IDENTIFIER, f"Expect {kind} name.")
+        self.__consume(TokenType.LEFT_PAREN, f"Exepect '(' after {kind} name")
+        parameters = []
+        if not self.__check(TokenType.RIGHT_PAREN):
+            parameters.append(self.__consume(TokenType.IDENTIFIER, "Expect parameter name"))
+            while self.__match(TokenType.COMMA):
+                if len(parameters) > 255:
+                    self.__error(self.__peek(), "Can't have more than 255 parameters.")
+                parameters.append(self.__consume(TokenType.IDENTIFIER, "Expect parameter name"))
+        self.__consume(TokenType.RIGHT_PAREN, "Expect ')' after parameters")
+
+        self.__consume(TokenType.LEFT_BRACE, f"Expect '{{' before {kind} body")
+        body = self.__block_statement()
+        return Function(name, parameters, body.statements)
+
     def __if_statement(self) -> Stmt:
         self.__consume(TokenType.LEFT_PAREN, "Expect '(' after 'if'.")
         condition = self.__expression()
@@ -157,7 +175,7 @@ class Parser:
         self.__consume(TokenType.SEMICOLON, "Expect ';' after expression.")
         return Expression(value)
 
-    def __block_statement(self) -> Stmt:
+    def __block_statement(self) -> Block:
         statements = []
 
         while not self.__check(TokenType.RIGHT_BRACE) and not self.__is_at_end():
@@ -221,7 +239,30 @@ class Parser:
             operator = self.__previous()
             right = self.__unary()
             return Unary(operator, right)
-        return self.__primary()
+        return self.__call()
+
+    def __call(self) -> Expr:
+        expr = self.__primary()
+
+        while True:
+            if self.__match(TokenType.LEFT_PAREN):
+                expr = self.__finish_call(expr)
+            else:
+                break
+        return expr
+
+    def __finish_call(self, callee: Expr) -> Expr:
+        arguments = []
+
+        if not self.__check(TokenType.RIGHT_PAREN):
+            arguments.append(self.__expression())
+            while self.__match(TokenType.COMMA):
+                if len(arguments) >= 255:
+                    self.__error(self.__peek(), "Can't have more than 255 arguments.")
+                arguments.append(self.__expression())
+
+        paren = self.__consume(TokenType.RIGHT_PAREN, "Expect ')' after arguments.")
+        return Call(callee, paren, arguments)
 
     def __primary(self) -> Expr:
         if self.__match(TokenType.FALSE):

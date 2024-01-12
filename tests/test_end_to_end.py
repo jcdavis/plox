@@ -35,3 +35,12 @@ def test_for():
         }
     """
     assert __run_script(script) == ["0.0", "2.0", "4.0"]
+
+def test_fun():
+    script = """
+        fun test(first, last) {
+            print first + " " + last;
+        }
+        test("Hello", "world!");
+    """
+    assert __run_script(script) == ["Hello world!"]

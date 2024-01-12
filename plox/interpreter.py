@@ -1,20 +1,28 @@
 import logging
 import numbers
+import time
 
 from .environment import Environment
-from .stmt import Block, Expression, If, Print, Stmt, Var, While
+from .stmt import Block, Expression, Function, If, Print, Stmt, Var, While
 from . import plox
-from .expr import Assign, Binary, Expr, Grouping, Literal, Logical, Unary, Variable
+from .expr import Assign, Binary, Call, Expr, Grouping, Literal, Logical, Unary, Variable
 from .runtime_exception import PloxRuntimeException
 from .tokens import Token, TokenType
 
 
 class Interpreter:
-    def __init__(self, capture_output = False):
+    def __init__(self, capture_output=False):
+        from . import lox_callable
         self.logger = logging.getLogger("interpreter")
-        self.environment = Environment()
+        self.globals = Environment()
+        self.environment = self.globals
         self.capture_output = capture_output
         self.output: list[str] = []
+
+        self.globals.define("clock", type('ClockFunction', (lox_callable.LoxCallable,), {
+            'arity': lambda self: 0,
+            'call': lambda self, interpreter, arguments: int(time.time())
+        })())
 
     def interpret(self, statements: list[Stmt]) -> None:
         try:
@@ -24,15 +32,25 @@ class Interpreter:
             plox.error(pre.token.line, pre.message)
 
     def __evaluate(self, expr: Expr) -> object:
+        from . import lox_callable
         match expr:
+            case Binary(left, op, right):
+                return self.__visit_binary(left, op, right)
+            case Call(callee, paren, arguments):
+                evaluated_callee = self.__evaluate(callee)
+                evaluated_arugments = [self.__evaluate(arg) for arg in arguments]
+                if isinstance(evaluated_callee, lox_callable.LoxCallable):
+                    if len(arguments) != evaluated_callee.arity():
+                        raise PloxRuntimeException(paren, f"Expected {evaluated_callee.arity()} arguments but got {len(arguments)}.")
+                    return evaluated_callee.call(self, evaluated_arugments)
+                raise PloxRuntimeException(paren, f"Can't call {evaluated_callee}. Can only call functions and classes.")
+
             case Grouping(expression):
                 return self.__evaluate(expression)
             case Literal(value):
                 return value
             case Unary(op, right):
                 return self.__visit_unary(op, right)
-            case Binary(left, op, right):
-                return self.__visit_binary(left, op, right)
             case Variable(name):
                 return self.environment.get(name)
             case Assign(name, value):
@@ -44,7 +62,7 @@ class Interpreter:
     def __execute(self, statement: Stmt) -> None:
         match statement:
             case Block(statements):
-                self.__execute_block(statements, Environment(self.environment))
+                self.execute_block(statements, Environment(self.environment))
             case Expression(expression):
                 self.__evaluate(expression)
             case Print(expression):
@@ -58,6 +76,10 @@ class Interpreter:
                 if intializer:
                     value = self.__evaluate(intializer)
                 self.environment.define(name.lexeme, value)
+            case Function(name, _, _) as fn:
+                from .lox_callable import LoxFunction
+                lox_function = LoxFunction(fn)
+                self.environment.define(name.lexeme, lox_function)
             case If(condition, then_branch, else_branch):
                 if self.__is_truthy(self.__evaluate(condition)):
                     self.__execute(then_branch)
@@ -67,7 +89,7 @@ class Interpreter:
                 while self.__is_truthy(self.__evaluate(condition)):
                     self.__execute(body)
 
-    def __execute_block(self, statements: list[Stmt], environment: Environment) -> None:
+    def execute_block(self, statements: list[Stmt], environment: Environment) -> None:
         prev = self.environment
         try:
             self.environment = environment
