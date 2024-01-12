@@ -25,6 +25,12 @@ class Print(Stmt):
 
 
 @dataclass
+class Return(Stmt):
+    keyword: Token
+    value: Optional[Expr]
+
+
+@dataclass
 class Var(Stmt):
     name: Token
     initializer: Optional[Expr]

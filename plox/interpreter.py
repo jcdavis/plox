@@ -3,10 +3,10 @@ import numbers
 import time
 
 from .environment import Environment
-from .stmt import Block, Expression, Function, If, Print, Stmt, Var, While
+from .stmt import Block, Expression, Function, If, Print, Return, Stmt, Var, While
 from . import plox
 from .expr import Assign, Binary, Call, Expr, Grouping, Literal, Logical, Unary, Variable
-from .runtime_exception import PloxRuntimeException
+from .runtime_exception import PloxRuntimeException, ReturnException
 from .tokens import Token, TokenType
 
 
@@ -71,6 +71,11 @@ class Interpreter:
                     self.output.append(string)
                 else:
                     print(string)
+            case Return(_, return_value):
+                evaluated_value = None
+                if return_value:
+                    evaluated_value = self.__evaluate(return_value)
+                raise ReturnException(evaluated_value)
             case Var(name, intializer):
                 value = None
                 if intializer:

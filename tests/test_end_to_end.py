@@ -44,3 +44,13 @@ def test_fun():
         test("Hello", "world!");
     """
     assert __run_script(script) == ["Hello world!"]
+
+def test_return():
+    script = """
+        fun fib(n) {
+        if (n <= 1) return n;
+        return fib(n - 2) + fib(n - 1);
+        }
+        print fib(10);
+    """
+    assert __run_script(script) == ["55.0"]

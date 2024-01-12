@@ -1,5 +1,6 @@
 from abc import abstractmethod
 
+from .runtime_exception import ReturnException
 from .environment import Environment
 from .stmt import Function
 from .interpreter import Interpreter
@@ -14,6 +15,7 @@ class LoxCallable:
     def call(self, interpreter: Interpreter, arguments: list[object]) -> object:
         pass
 
+
 class LoxFunction(LoxCallable):
     def __init__(self, declaration: Function):
         self.declaration = declaration
@@ -25,7 +27,10 @@ class LoxFunction(LoxCallable):
         env = Environment(interpreter.globals)
         for (i, param) in enumerate(self.declaration.params):
             env.define(param.lexeme, arguments[i])
-        interpreter.execute_block(self.declaration.body, env)
+        try:
+            interpreter.execute_block(self.declaration.body, env)
+        except ReturnException as re:
+            return re.value
         return None
 
     def __str__(self) -> str:

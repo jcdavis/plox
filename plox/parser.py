@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from .stmt import Block, Expression, Function, If, Print, Stmt, Var, While
+from .stmt import Block, Expression, Function, If, Print, Return, Stmt, Var, While
 from .tokens import Token, TokenType
 from .expr import Assign, Call, Expr, Binary, Grouping, Literal, Logical, Unary, Variable
 from . import plox
@@ -82,6 +82,8 @@ class Parser:
             return self.__if_statement()
         if self.__match(TokenType.PRINT):
             return self.__print_statement()
+        if self.__match(TokenType.RETURN):
+            return self.__return_statement()
         if self.__match(TokenType.WHILE):
             return self.__while_statement()
         if self.__match(TokenType.LEFT_BRACE):
@@ -153,6 +155,15 @@ class Parser:
         self.__consume(TokenType.SEMICOLON, "Expect ';' after value.")
         return Print(value)
 
+    def __return_statement(self) -> Stmt:
+        keyword = self.__previous()
+        value = None
+        if not self.__check(TokenType.SEMICOLON):
+            value = self.__expression()
+
+        self.__consume(TokenType.SEMICOLON, "Expect ';' after return value.")
+        return Return(keyword, value)
+
     def __var_declaration(self) -> Stmt:
         name = self.__consume(TokenType.IDENTIFIER, "Expect variable name.")
 
@@ -187,7 +198,6 @@ class Parser:
 
         self.__consume(TokenType.RIGHT_BRACE, "Expect '}' after block")
         return Block(statements)
-
 
     def __equality(self) -> Expr:
         expr = self.__comparison()
