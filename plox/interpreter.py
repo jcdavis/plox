@@ -83,7 +83,7 @@ class Interpreter:
                 self.environment.define(name.lexeme, value)
             case Function(name, _, _) as fn:
                 from .lox_callable import LoxFunction
-                lox_function = LoxFunction(fn)
+                lox_function = LoxFunction(fn, self.environment)
                 self.environment.define(name.lexeme, lox_function)
             case If(condition, then_branch, else_branch):
                 if self.__is_truthy(self.__evaluate(condition)):
