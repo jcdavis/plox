@@ -2,52 +2,53 @@ from dataclasses import dataclass
 from .tokens import Token
 
 
+@dataclass(frozen=True)
 class Expr:
     pass
 
 
-@dataclass
+@dataclass(frozen=True)
 class Assign(Expr):
     name: Token
     value: Expr
 
 
-@dataclass
+@dataclass(frozen=True)
 class Binary(Expr):
     left: Expr
     operator: Token
     right: Expr
 
 
-@dataclass
+@dataclass(frozen=True)
 class Call(Expr):
     callee: Expr
     paren: Token
     arguments: list[Expr]
 
 
-@dataclass
+@dataclass(frozen=True)
 class Grouping(Expr):
     expression: Expr
 
 
-@dataclass
+@dataclass(frozen=True)
 class Literal(Expr):
     value: object
 
 
-@dataclass
+@dataclass(frozen=True)
 class Unary(Expr):
     operator: Token
     right: Expr
 
 
-@dataclass
+@dataclass(frozen=True)
 class Variable(Expr):
     name: Token
 
 
-@dataclass
+@dataclass(frozen=True)
 class Logical(Expr):
     left: Expr
     operator: Token

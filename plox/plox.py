@@ -2,6 +2,7 @@ import logging
 import argparse
 from . import interpreter
 from . import parser
+from . import resolver
 from . import scanner
 
 had_error = False
@@ -21,7 +22,12 @@ class LoxRunner:
         statements = p.parse()
         if had_error:
             return
+
         interp = interpreter.Interpreter()
+        resolve = resolver.Resolver(interp)
+        resolve.resolve(statements)
+        if had_error:
+            return
         interp.interpret(statements)
 
     def run_file(self, file_name: str) -> None:

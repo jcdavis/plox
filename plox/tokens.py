@@ -52,9 +52,10 @@ class TokenType(Enum):
     EOF = 39
 
 
-@dataclass
+@dataclass(frozen=True)
 class Token:
     token_type: TokenType
     lexeme: str
     literal: object
     line: int
+    line_start: int

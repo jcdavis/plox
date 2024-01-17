@@ -4,7 +4,6 @@ import time
 
 from .environment import Environment
 from .stmt import Block, Expression, Function, If, Print, Return, Stmt, Var, While
-from . import plox
 from .expr import Assign, Binary, Call, Expr, Grouping, Literal, Logical, Unary, Variable
 from .runtime_exception import PloxRuntimeException, ReturnException
 from .tokens import Token, TokenType
@@ -15,6 +14,7 @@ class Interpreter:
         from . import lox_callable
         self.logger = logging.getLogger("interpreter")
         self.globals = Environment()
+        self.locals: dict[Expr, int] = {}
         self.environment = self.globals
         self.capture_output = capture_output
         self.output: list[str] = []
@@ -29,7 +29,11 @@ class Interpreter:
             for statement in statements:
                 self.__execute(statement)
         except PloxRuntimeException as pre:
-            plox.error(pre.token.line, pre.message)
+            from .plox import error
+            error(pre.token.line, pre.message)
+
+    def resolve(self, expr: Expr, depth: int) -> None:
+        self.locals[expr] = depth
 
     def __evaluate(self, expr: Expr) -> object:
         from . import lox_callable
@@ -51,10 +55,16 @@ class Interpreter:
                 return value
             case Unary(op, right):
                 return self.__visit_unary(op, right)
-            case Variable(name):
-                return self.environment.get(name)
-            case Assign(name, value):
-                return self.environment.assign(name, self.__evaluate(value))
+            case Variable(name) as var:
+                return self.__lookup_variable(name, var)
+            case Assign(name, value) as assign:
+                evaluated_value = self.__evaluate(value)
+                if assign in self.locals:
+                    depth = self.locals[assign]
+                    self.environment.assign_at(depth, name, evaluated_value)
+                else:
+                    self.globals.assign(name, evaluated_value)
+                return evaluated_value
             case Logical(left, op, right):
                 return self.__visit__logical(left, op, right)
         raise Exception(f"Unexpected expr {expr}")
@@ -184,6 +194,13 @@ class Interpreter:
             if not self.__is_truthy(evaluated_left):
                 return evaluated_left
         return self.__evaluate(right)
+
+    def __lookup_variable(self, name: Token, expr: Expr) -> object:
+        if expr in self.locals:
+            depth = self.locals[expr]
+            res = self.environment.get_at(depth, name.lexeme)
+            return res
+        return self.globals.get(name)
 
     def __is_truthy(self, op: object) -> bool:
         if not op:

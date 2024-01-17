@@ -5,52 +5,53 @@ from .tokens import Token
 from .expr import Expr
 
 
+@dataclass(frozen=True)
 class Stmt:
     pass
 
 
-@dataclass
+@dataclass(frozen=True)
 class Block(Stmt):
     statements: list[Stmt]
 
 
-@dataclass
+@dataclass(frozen=True)
 class Expression(Stmt):
     expression: Expr
 
 
-@dataclass
+@dataclass(frozen=True)
 class Print(Stmt):
     expression: Expr
 
 
-@dataclass
+@dataclass(frozen=True)
 class Return(Stmt):
     keyword: Token
     value: Optional[Expr]
 
 
-@dataclass
+@dataclass(frozen=True)
 class Var(Stmt):
     name: Token
     initializer: Optional[Expr]
 
 
-@dataclass
+@dataclass(frozen=True)
 class Function(Stmt):
     name: Token
     params: list[Token]
     body: list[Stmt]
 
 
-@dataclass
+@dataclass(frozen=True)
 class If(Stmt):
     condition: Expr
     then_branch: Stmt
     else_branch: Optional[Stmt]
 
 
-@dataclass
+@dataclass(frozen=True)
 class While(Stmt):
     condition: Expr
     body: Stmt

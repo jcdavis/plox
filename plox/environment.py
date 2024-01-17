@@ -21,6 +21,9 @@ class Environment:
 
         raise PloxRuntimeException(name, f"Undefined variable {name.lexeme}.")
 
+    def get_at(self, distance: int, name: str) -> object:
+        return self.__ancestor(distance).values[name]
+
     def assign(self, name: Token, value: object) -> None:
         if name.lexeme in self.values:
             self.values[name.lexeme] = value
@@ -29,3 +32,14 @@ class Environment:
             self.enclosing.assign(name, value)
             return
         raise PloxRuntimeException(name, f"Undefined variable '{name.lexeme}'")
+
+    def assign_at(self, distance: int, name: Token, value: object) -> None:
+        self.__ancestor(distance).values[name.lexeme] = value
+
+    def __ancestor(self, distance: int) -> 'Environment':
+        env = self
+        for _ in range(distance):
+            if not env.enclosing:
+                raise RuntimeError("Why isn't encloding defined")
+            env = env.enclosing
+        return env
