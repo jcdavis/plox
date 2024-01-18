@@ -1,6 +1,7 @@
 from plox.interpreter import Interpreter
 from plox.scanner import Scanner
 from plox.parser import Parser
+from plox.resolver import Resolver
 
 def __run_script(contents: str) -> list[str]:
     sc = Scanner(contents)
@@ -8,6 +9,8 @@ def __run_script(contents: str) -> list[str]:
     p = Parser(tokens)
     statements = p.parse()
     interp = Interpreter(capture_output=True)
+    resolve = Resolver(interp)
+    resolve.resolve(statements)
     interp.interpret(statements)
     return interp.output
 
@@ -54,3 +57,18 @@ def test_return():
         print fib(10);
     """
     assert __run_script(script) == ["55.0"]
+
+def test_class():
+    script = """
+        class Cake {
+            taste() {
+                var adjective = "delicious";
+                print "The " + this.flavor + " cake is " + adjective + "!";
+            }
+        }
+
+        var cake = Cake();
+        cake.flavor = "German chocolate";
+        cake.taste();
+    """
+    assert __run_script(script) == ["The German chocolate cake is delicious!"]
