@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from .tokens import Token
-from .expr import Expr
+from .expr import Expr, Variable
 
 
 @dataclass(frozen=True)
@@ -60,4 +60,5 @@ class While(Stmt):
 @dataclass(frozen=True)
 class Class(Stmt):
     name: Token
-    functions: list[Function]
+    superclass: Optional[Variable]
+    methods: list[Function]

@@ -1,10 +1,11 @@
 import logging
 import numbers
 import time
+from typing import Optional
 
 from .environment import Environment
 from .stmt import Block, Class, Expression, Function, If, Print, Return, Stmt, Var, While
-from .expr import Assign, Binary, Call, Expr, Get, Grouping, Literal, Logical, Set, This, Unary, Variable
+from .expr import Assign, Binary, Call, Expr, Get, Grouping, Literal, Logical, Set, Super, This, Unary, Variable
 from .runtime_exception import PloxRuntimeException, ReturnException
 from .tokens import Token, TokenType
 
@@ -84,6 +85,16 @@ class Interpreter:
                         raise PloxRuntimeException(name, "Only instances have fields.")
             case This(keyword) as this:
                 return self.__lookup_variable(keyword, this)
+            case Super() as superclass:
+                distance = self.locals[superclass]
+                superklass = self.environment.get_at(distance, "super")
+                assert isinstance(superklass, lox_class.LoxClass)
+                instance = self.environment.get_at(distance - 1, "this")
+                assert isinstance(instance, lox_class.LoxInstance)
+                method = superklass.find_method(superclass.method.lexeme)
+                if not method:
+                    raise PloxRuntimeException(superclass.keyword, "Couldn't find super method?")
+                return method.bind(instance)
 
         raise Exception(f"Unexpected expr {expr}")
 
@@ -112,7 +123,7 @@ class Interpreter:
                     value = self.__evaluate(intializer)
                 self.environment.define(name.lexeme, value)
             case Function(name, _, _) as fn:
-                lox_function = LoxFunction(fn, self.environment, False)
+                lox_function = LoxFunction(fn, self.environment)
                 self.environment.define(name.lexeme, lox_function)
             case If(condition, then_branch, else_branch):
                 if self.__is_truthy(self.__evaluate(condition)):
@@ -122,13 +133,27 @@ class Interpreter:
             case While(condition, body):
                 while self.__is_truthy(self.__evaluate(condition)):
                     self.__execute(body)
-            case Class(name, methods):
+            case Class(name, superclass, methods):
+                evaluated_superclass: Optional[lox_class.LoxClass] = None
+                if superclass:
+                    evaluated = self.__evaluate(superclass)
+                    if not isinstance(evaluated, lox_class.LoxClass):
+                        raise PloxRuntimeException(superclass.name, "Superclass not a class")
+                    evaluated_superclass = evaluated
+
                 self.environment.define(name.lexeme, None)
+
+                if superclass:
+                    self.environment = Environment(self.environment)
+                    self.environment.define("super", evaluated_superclass)
                 method_map = {}
                 for method in methods:
                     function = LoxFunction(method, self.environment, method.name.lexeme == "init")
                     method_map[method.name.lexeme] = function
-                klass = lox_class.LoxClass(name.lexeme, method_map)
+                klass = lox_class.LoxClass(name.lexeme, evaluated_superclass, method_map)
+                if superclass:
+                    assert self.environment.enclosing
+                    self.environment = self.environment.enclosing
                 self.environment.assign(name, klass)
 
     def execute_block(self, statements: list[Stmt], environment: Environment) -> None:

@@ -17,7 +17,7 @@ class LoxCallable:
 
 
 class LoxFunction(LoxCallable):
-    def __init__(self, declaration: Function, closure: Environment, is_initializer: bool=False):
+    def __init__(self, declaration: Function, closure: Environment, is_initializer: bool = False):
         self.declaration = declaration
         self.closure = closure
         self.is_initializer = is_initializer

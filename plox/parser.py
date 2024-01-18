@@ -3,7 +3,7 @@ from typing import Optional
 
 from .stmt import Block, Class, Expression, Function, If, Print, Return, Stmt, Var, While
 from .tokens import Token, TokenType
-from .expr import Assign, Call, Expr, Binary, Grouping, Literal, Logical, Set, This, Unary, Variable, Get
+from .expr import Assign, Call, Expr, Binary, Grouping, Literal, Logical, Set, This, Unary, Variable, Get, Super
 from . import plox
 
 
@@ -45,6 +45,10 @@ class Parser:
 
     def __class_declaration(self) -> Stmt:
         name = self.__consume(TokenType.IDENTIFIER, "Expect class name.")
+        superclass = None
+        if self.__match(TokenType.LESS):
+            self.__consume(TokenType.IDENTIFIER, "Expect superclass name")
+            superclass = Variable(self.__previous())
         self.__consume(TokenType.LEFT_BRACE, "Expect '{' before class body.")
 
         methods = []
@@ -52,7 +56,7 @@ class Parser:
             methods.append(self.__function("method"))
 
         self.__consume(TokenType.RIGHT_BRACE, "Expect '}' after class body.")
-        return Class(name, methods)
+        return Class(name, superclass, methods)
 
     def __assignment(self) -> Expr:
         expr = self.__or()
@@ -303,6 +307,11 @@ class Parser:
         if self.__match(TokenType.NUMBER, TokenType.STRING):
             return Literal(self.__previous().literal)
 
+        if self.__match(TokenType.SUPER):
+            keyword = self.__previous()
+            self.__consume(TokenType.DOT, "Expect '.' after 'super'.")
+            method = self.__consume(TokenType.IDENTIFIER, "Expect superclass method name.")
+            return Super(keyword, method)
         if self.__match(TokenType.THIS):
             return This(self.__previous())
 

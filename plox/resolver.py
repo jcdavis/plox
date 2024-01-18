@@ -1,7 +1,7 @@
 from enum import Enum
 
 from .tokens import Token
-from .expr import Assign, Binary, Call, Expr, Get, Grouping, Literal, Logical, Set, This, Unary, Variable
+from .expr import Assign, Binary, Call, Expr, Get, Grouping, Literal, Logical, Set, Super, This, Unary, Variable
 from .stmt import Block, Class, Expression, Function, If, Print, Return, Stmt, Var, While
 from .interpreter import Interpreter
 from . import plox
@@ -17,6 +17,7 @@ class Resolver:
     class ClassType(Enum):
         NONE = 1
         CLASS = 2
+        SUBClASS = 3
 
     def __init__(self, interpreter: Interpreter):
         self.interpreter = interpreter
@@ -60,11 +61,19 @@ class Resolver:
             case While(condition, while_body):
                 self.visit_expr(condition)
                 self.visit_statement(while_body)
-            case Class(name, methods):
+            case Class(name, superclass, methods):
                 enclosing_class = self.current_class
                 self.current_class = self.ClassType.CLASS
                 self.__declare(name)
                 self.__define(name)
+
+                if superclass:
+                    if name.lexeme == superclass.name.lexeme:
+                        plox.error(superclass.name.line, "A class can't inherit from itself.")
+                    self.current_class = self.ClassType.SUBClASS
+                    self.visit_expr(superclass)
+                    self.__begin_scope()
+                    self.scopes[-1]["super"] = True
 
                 self.__begin_scope()
                 self.scopes[-1]["this"] = True
@@ -76,6 +85,8 @@ class Resolver:
                     self.__resolve_function(method, declaration)
 
                 self.__end_scope()
+                if superclass:
+                    self.__end_scope()
                 self.current_class = enclosing_class
 
     def visit_expr(self, expr: Expr) -> None:
@@ -106,6 +117,12 @@ class Resolver:
                     plox.error(keyword.line, "Can't use 'this' outside of a class.")
                     return
                 self.__resolve_local(this, keyword)
+            case Super(keyword, _) as superclass:
+                if self.current_class == self.ClassType.NONE:
+                    plox.error(keyword.line, "Can't use 'super' outside of a class.")
+                if self.current_class == self.ClassType.CLASS:
+                    plox.error(keyword.line, "Can't use 'super' in a class with no superclass.")
+                self.__resolve_local(superclass, keyword)
 
     def __resolve_function(self, function: Function, function_type: FunctionType) -> None:
         enclosing_function = self.current_function

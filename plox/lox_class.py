@@ -6,15 +6,20 @@ from .lox_callable import LoxCallable, LoxFunction
 
 
 class LoxClass(LoxCallable):
-    def __init__(self, name: str, methods: dict[str, LoxFunction]) -> None:
+    def __init__(self, name: str, superclass: Optional['LoxClass'], methods: dict[str, LoxFunction]) -> None:
         self.name = name
+        self.superclass = superclass
         self.methods = methods
 
     def __str__(self) -> str:
         return self.name
 
     def find_method(self, name: str) -> Optional[LoxFunction]:
-        return self.methods.get(name, None)
+        if name in self.methods:
+            return self.methods[name]
+        if self.superclass:
+            return self.superclass.find_method(name)
+        return None
 
     def call(self, interpreter: Interpreter, arguments: list[object]) -> object:
         instance = LoxInstance(self)
@@ -31,6 +36,7 @@ class LoxClass(LoxCallable):
                 return 0
             case _:
                 raise RuntimeError("stupid")
+
 
 class LoxInstance:
     def __init__(self, klass: LoxClass) -> None:

@@ -72,3 +72,22 @@ def test_class():
         cake.taste();
     """
     assert __run_script(script) == ["The German chocolate cake is delicious!"]
+
+def test_superclass():
+    script = """
+        class Doughnut {
+        cook() {
+            print "Fry until golden brown.";
+        }
+        }
+
+        class BostonCream < Doughnut {
+        cook() {
+            super.cook();
+            print "Pipe full of custard and coat with chocolate.";
+        }
+        }
+
+        BostonCream().cook();
+    """
+    assert __run_script(script) == ["Fry until golden brown.", "Pipe full of custard and coat with chocolate."]
