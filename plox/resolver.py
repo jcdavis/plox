@@ -1,8 +1,8 @@
 from enum import Enum
 
 from .tokens import Token
-from .expr import Assign, Binary, Call, Expr, Grouping, Literal, Logical, Unary, Variable
-from .stmt import Block, Expression, Function, If, Print, Return, Stmt, Var, While
+from .expr import Assign, Binary, Call, Expr, Get, Grouping, Literal, Logical, Set, This, Unary, Variable
+from .stmt import Block, Class, Expression, Function, If, Print, Return, Stmt, Var, While
 from .interpreter import Interpreter
 from . import plox
 
@@ -11,11 +11,18 @@ class Resolver:
     class FunctionType(Enum):
         NONE = 1
         FUNCTION = 2
+        METHOD = 3
+        INITIALIZER = 4
+
+    class ClassType(Enum):
+        NONE = 1
+        CLASS = 2
 
     def __init__(self, interpreter: Interpreter):
         self.interpreter = interpreter
         self.scopes: list[dict[str, bool]] = []
         self.current_function = self.FunctionType.NONE
+        self.current_class = self.ClassType.NONE
 
     def resolve(self, statements: list[Stmt]) -> None:
         for statement in statements:
@@ -33,6 +40,8 @@ class Resolver:
                 if self.current_function == self.FunctionType.NONE:
                     plox.error(keyword.line, "Can't return from top-level code.")
                 if return_value:
+                    if self.current_function == self.FunctionType.INITIALIZER:
+                        plox.error(keyword.line, "Can't return a value from an initializer.")
                     self.visit_expr(return_value)
             case Var(name, initializer):
                 self.__declare(name)
@@ -51,6 +60,23 @@ class Resolver:
             case While(condition, while_body):
                 self.visit_expr(condition)
                 self.visit_statement(while_body)
+            case Class(name, methods):
+                enclosing_class = self.current_class
+                self.current_class = self.ClassType.CLASS
+                self.__declare(name)
+                self.__define(name)
+
+                self.__begin_scope()
+                self.scopes[-1]["this"] = True
+
+                for method in methods:
+                    declaration = self.FunctionType.METHOD
+                    if method.name.lexeme == "init":
+                        declaration = self.FunctionType.INITIALIZER
+                    self.__resolve_function(method, declaration)
+
+                self.__end_scope()
+                self.current_class = enclosing_class
 
     def visit_expr(self, expr: Expr) -> None:
         match expr:
@@ -64,7 +90,7 @@ class Resolver:
                 self.visit_expr(callee)
                 for argument in arguments:
                     self.visit_expr(argument)
-            case Grouping(value) | Unary(_, value):
+            case Grouping(value) | Unary(_, value) | Get(value, _):
                 self.visit_expr(value)
             case Literal():
                 pass
@@ -72,6 +98,14 @@ class Resolver:
                 if len(self.scopes) > 0 and self.scopes[-1].get(name.lexeme, None) is False:
                     plox.error(name.line, "Can't read local variable in its own initializer.")
                 self.__resolve_local(var, name)
+            case Set(obj, _, value):
+                self.visit_expr(value)
+                self.visit_expr(obj)
+            case This(keyword) as this:
+                if self.current_class == self.ClassType.NONE:
+                    plox.error(keyword.line, "Can't use 'this' outside of a class.")
+                    return
+                self.__resolve_local(this, keyword)
 
     def __resolve_function(self, function: Function, function_type: FunctionType) -> None:
         enclosing_function = self.current_function

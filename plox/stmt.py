@@ -55,3 +55,9 @@ class If(Stmt):
 class While(Stmt):
     condition: Expr
     body: Stmt
+
+
+@dataclass(frozen=True)
+class Class(Stmt):
+    name: Token
+    functions: list[Function]

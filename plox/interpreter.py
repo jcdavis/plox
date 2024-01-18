@@ -3,8 +3,8 @@ import numbers
 import time
 
 from .environment import Environment
-from .stmt import Block, Expression, Function, If, Print, Return, Stmt, Var, While
-from .expr import Assign, Binary, Call, Expr, Grouping, Literal, Logical, Unary, Variable
+from .stmt import Block, Class, Expression, Function, If, Print, Return, Stmt, Var, While
+from .expr import Assign, Binary, Call, Expr, Get, Grouping, Literal, Logical, Set, This, Unary, Variable
 from .runtime_exception import PloxRuntimeException, ReturnException
 from .tokens import Token, TokenType
 
@@ -37,6 +37,7 @@ class Interpreter:
 
     def __evaluate(self, expr: Expr) -> object:
         from . import lox_callable
+        from . import lox_class
         match expr:
             case Binary(left, op, right):
                 return self.__visit_binary(left, op, right)
@@ -48,6 +49,12 @@ class Interpreter:
                         raise PloxRuntimeException(paren, f"Expected {evaluated_callee.arity()} arguments but got {len(arguments)}.")
                     return evaluated_callee.call(self, evaluated_arugments)
                 raise PloxRuntimeException(paren, f"Can't call {evaluated_callee}. Can only call functions and classes.")
+            case Get(object, name):
+                match self.__evaluate(object):
+                    case lox_class.LoxInstance() as li:
+                        return li.get(name)
+                    case _:
+                        raise PloxRuntimeException(name, "Only instances have properties")
 
             case Grouping(expression):
                 return self.__evaluate(expression)
@@ -67,9 +74,22 @@ class Interpreter:
                 return evaluated_value
             case Logical(left, op, right):
                 return self.__visit__logical(left, op, right)
+            case Set(obj, name, value):
+                match self.__evaluate(obj):
+                    case lox_class.LoxInstance() as li:
+                        evaluated_value = self.__evaluate(value)
+                        li.set(name, evaluated_value)
+                        return None
+                    case _:
+                        raise PloxRuntimeException(name, "Only instances have fields.")
+            case This(keyword) as this:
+                return self.__lookup_variable(keyword, this)
+
         raise Exception(f"Unexpected expr {expr}")
 
     def __execute(self, statement: Stmt) -> None:
+        from . import lox_class
+        from .lox_callable import LoxFunction
         match statement:
             case Block(statements):
                 self.execute_block(statements, Environment(self.environment))
@@ -92,8 +112,7 @@ class Interpreter:
                     value = self.__evaluate(intializer)
                 self.environment.define(name.lexeme, value)
             case Function(name, _, _) as fn:
-                from .lox_callable import LoxFunction
-                lox_function = LoxFunction(fn, self.environment)
+                lox_function = LoxFunction(fn, self.environment, False)
                 self.environment.define(name.lexeme, lox_function)
             case If(condition, then_branch, else_branch):
                 if self.__is_truthy(self.__evaluate(condition)):
@@ -103,6 +122,14 @@ class Interpreter:
             case While(condition, body):
                 while self.__is_truthy(self.__evaluate(condition)):
                     self.__execute(body)
+            case Class(name, methods):
+                self.environment.define(name.lexeme, None)
+                method_map = {}
+                for method in methods:
+                    function = LoxFunction(method, self.environment, method.name.lexeme == "init")
+                    method_map[method.name.lexeme] = function
+                klass = lox_class.LoxClass(name.lexeme, method_map)
+                self.environment.assign(name, klass)
 
     def execute_block(self, statements: list[Stmt], environment: Environment) -> None:
         prev = self.environment

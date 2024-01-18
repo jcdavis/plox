@@ -1,9 +1,9 @@
 import logging
 from typing import Optional
 
-from .stmt import Block, Expression, Function, If, Print, Return, Stmt, Var, While
+from .stmt import Block, Class, Expression, Function, If, Print, Return, Stmt, Var, While
 from .tokens import Token, TokenType
-from .expr import Assign, Call, Expr, Binary, Grouping, Literal, Logical, Unary, Variable
+from .expr import Assign, Call, Expr, Binary, Grouping, Literal, Logical, Set, This, Unary, Variable, Get
 from . import plox
 
 
@@ -32,6 +32,8 @@ class Parser:
 
     def __declaration(self) -> Optional[Stmt]:
         try:
+            if self.__match(TokenType.CLASS):
+                return self.__class_declaration()
             if self.__match(TokenType.FUN):
                 return self.__function("function")
             if self.__match(TokenType.VAR):
@@ -40,6 +42,17 @@ class Parser:
         except ParseException:
             self.__synchronize()
             return None
+
+    def __class_declaration(self) -> Stmt:
+        name = self.__consume(TokenType.IDENTIFIER, "Expect class name.")
+        self.__consume(TokenType.LEFT_BRACE, "Expect '{' before class body.")
+
+        methods = []
+        while not self.__check(TokenType.RIGHT_BRACE) and not self.__is_at_end():
+            methods.append(self.__function("method"))
+
+        self.__consume(TokenType.RIGHT_BRACE, "Expect '}' after class body.")
+        return Class(name, methods)
 
     def __assignment(self) -> Expr:
         expr = self.__or()
@@ -51,6 +64,8 @@ class Parser:
             match expr:
                 case Variable(name):
                     return Assign(name, value)
+                case Get(obj, name):
+                    return Set(obj, name, value)
                 case _:
                     self.__error(equals, "Invalid assignment target")
         return expr
@@ -257,6 +272,9 @@ class Parser:
         while True:
             if self.__match(TokenType.LEFT_PAREN):
                 expr = self.__finish_call(expr)
+            elif self.__match(TokenType.DOT):
+                name = self.__consume(TokenType.IDENTIFIER, "Expect property name after '.'.")
+                expr = Get(expr, name)
             else:
                 break
         return expr
@@ -284,6 +302,9 @@ class Parser:
 
         if self.__match(TokenType.NUMBER, TokenType.STRING):
             return Literal(self.__previous().literal)
+
+        if self.__match(TokenType.THIS):
+            return This(self.__previous())
 
         if self.__match(TokenType.IDENTIFIER):
             return Variable(self.__previous())
